@@ -1,0 +1,638 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  D:\Dropbox\Teaching\ECO6193-6593 - Labour\Exams-Assignments-Problems\F2021\Assignment 1\Logfile.log
+  log type:  text
+ opened on:  28 Sep 2021, 14:52:27
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Cansim table 14100287: Labour Force Survey (LFS) data (.txt format)
+. import delimited CANSIM_14100287.txt, varnames(24) rowrange(25) clear 
+(20 vars, 547 obs)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * keep variables of interest (date + economic series of interest)
+. keep col0 col1 col2 col3 col6
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Label and rename variables
+. label var col0 "Monthly date (YYYY-MM)"
+
+. rename col0 date
+
+. 
+. label var col1 "Population (Persons); Both sexes; 15 years and over; Estimate; Seasonally adjusted"
+note: label truncated to 80 characters
+
+. rename col1 population 
+
+. 
+. label var col2 "Labour force (Persons); Both sexes; 15 years and over; Estimate; Seasonally adjuste
+> d"
+note: label truncated to 80 characters
+
+. rename col2 labour_force
+
+. 
+. label var col3 "Employment (Persons); Both sexes; 15 years and over; Estimate; Seasonally adjusted"
+note: label truncated to 80 characters
+
+. rename col3 employment
+
+. 
+. label var col6 "Unemployment (Persons); Both sexes; 15 years and over; Estimate; Seasonally adjuste
+> d"
+note: label truncated to 80 characters
+
+. rename col6 unemployment
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\ST
+> D5a70_000000.tmp"
+
+. * save a temporary dataset for merging data
+. save dataset_lfs, replace
+(note: file dataset_lfs.dta not found)
+file dataset_lfs.dta saved
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * 2.2. Actual hours worked from CANSIM table 14100032
+. import delimited CANSIM_14100289.txt, varnames(6) rowrange(7) clear 
+(2 vars, 547 obs)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Repeat commands from above
+. label var col0 "Monthly date (YYYY-MM)"
+
+. rename col0 date
+
+. 
+. label var col1 "Total actual hours worked, all industries; Estimate (Hours)"
+
+. rename col1 tot_hours
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. save dataset_hours, replace
+(note: file dataset_hours.dta not found)
+file dataset_hours.dta saved
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * 2.3. Gross domestic product from FRED, series NAEXKP01CAQ189S
+. import delimited NAEXKP01CAQ189S.csv, varnames(1) rowrange(2) clear 
+(2 vars, 242 obs)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. label var date "Quarterly date (YYYY-MM-DD)"
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. label var naexkp01caq189s  "Gross Domestic Product by Expenditure in Constant Prices (source: OECD)"
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. rename naexkp01caq189s real_GDP
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. save dataset_GDP, replace
+(note: file dataset_GDP.dta not found)
+file dataset_GDP.dta saved
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Merge lfs data and hours
+. use dataset_lfs, clear
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. merge 1:1 date using dataset_hours
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                               547  (_merge==3)
+    -----------------------------------------
+
+. 
+end of do-file
+
+. drop _merge
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Generate indicators
+. gen u_rate      = unem/labour_force
+
+. gen u_pop       = unem/population
+
+. gen emp_pop = emp/population
+
+. gen lf_pop      = labour_force/population 
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Average hours in pop and per employed person
+. gen hours               = tot_hours / population
+
+. gen hours_emp   = tot_hours / employment
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * gen variables for the year and the calendar month
+. gen year = substr(date,1,4)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. gen month = substr(date,6,7)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. destring year, replace
+year: all characters numeric; replaced as int
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. destring month, replace
+month: all characters numeric; replaced as byte
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * order variables
+. order date year month 
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * gen calendar quarter variable using the calendar month
+. gen quarter = ceil( month/3 )
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. order date year month quarter
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * collapse to compute quarterly averages
+. collapse tot_hours hours hours_emp emp_pop u_rate u_pop lf_pop population, by(year quarter) 
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. save dataset_lfs_hours_quarter, replace
+(note: file dataset_lfs_hours_quarter.dta not found)
+file dataset_lfs_hours_quarter.dta saved
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * data
+. use dataset_GDP, clear
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * quarter and year
+. gen year = substr(date, 1,4)
+
+. destring year, replace
+year: all characters numeric; replaced as int
+
+. gen quarter = substr(date, 6,2)
+
+. destring quarter, replace
+quarter: all characters numeric; replaced as byte
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * make quarter consistent across dataset
+. replace quarter = ceil( quarter/3 )
+(181 real changes made)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * cleanup a little bit
+. drop date
+
+. sort year quarter
+
+. order year quarter real_GDP
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. merge 1:1 year quarter using dataset_lfs_hours_quarter
+(note: variable quarter was byte, now float to accommodate using data's values)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                            61
+        from master                        60  (_merge==1)
+        from using                          1  (_merge==2)
+
+    matched                               182  (_merge==3)
+    -----------------------------------------
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. drop _merge
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tostring year, gen(year_string)
+year_string generated as str4
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tostring quarter, gen(quarter_string)
+quarter_string generated as str1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. gen date_string = year_str + "q" + quarter_str
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. gen date = quarterly( date_string, "YQ", 2021)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * declare time-series dimension
+. tsset date, quarterly
+        time variable:  date, 1961q1 to 2021q3
+                delta:  1 quarter
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * clean up
+. drop year* quarter* date_string
+
+. order date real hours lf_pop emp_ u_rate u_pop
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * GDP per capita (using the working-age population for simplicity)
+. replace real_GDP = real_GDP / population
+(242 real changes made, 60 to missing)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Average productivity of labour
+. gen prod_labour = real_GDP / tot_hours
+(61 missing values generated)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * label
+. label var u_rate        "Unemployment rate"
+
+. label var u_pop                 "Unemployment-to-population ratio"
+
+. label var emp_pop       "Employment-to-population ratio"
+
+. label var lf_pop        "Labour force participation rate"
+
+. label var hours_emp     "Average hours per employed persons"
+
+. label var hours         "Actual hours per capita"
+
+. label var real_GDP              "real GDP per capita"
+
+. label var prod_labour   "Real output per capita per worked hours"
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * save dataset and erase temporary data
+. save dataset, replace
+file dataset.dta saved
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * cleanup
+. erase dataset_lfs.dta 
+
+. erase dataset_hours.dta
+
+. erase dataset_GDP.dta
+
+. erase dataset_lfs_hours_quarter.dta
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. foreach var of varlist real_GDP prod_labour hours hours_emp u_rate u_pop emp_pop lf_pop {
+  2. 
+. 
+. * 4.1. Trend and cycle
+. 
+. * Hodrick-Prescott filter with smoothing parameter 1600
+. tsfilter hp `var'_cycle = `var', smooth( 1600 ) trend( `var'_trend )
+  3. 
+. 
+. **
+. **
+. 
+. 
+. * 4.2. Log difference from trend
+. gen `var'_hat = log( `var' ) - log( `var'_trend )
+  4. 
+. }
+(61 missing values generated)
+(61 missing values generated)
+(60 missing values generated)
+(60 missing values generated)
+(60 missing values generated)
+(60 missing values generated)
+(60 missing values generated)
+(60 missing values generated)
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * 5. Statistics
+. 
+. * exclude COVID times
+. gen date_num = date
+
+. gen COVID_times = (date_num > quarterly("2019q4","YQ"))
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Descriptive statistics
+. sum real_GDP_hat hours_hat hours_emp_hat emp*hat u_rate*hat u_pop*hat lf_*hat prod*hat if COVID_times ==
+>  0
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+real_GDP_hat |        176    .0004943    .0145322  -.0538191   .0323763
+   hours_hat |        176    .0007701    .0148662  -.0483725   .0348257
+hours_emp_~t |        176    .0003807     .005237  -.0134818   .0121632
+ emp_pop_hat |        176    .0004772    .0111334  -.0369741    .032326
+  u_rate_hat |        176    -.011695    .0900492  -.2410844   .2399408
+-------------+---------------------------------------------------------
+   u_pop_hat |        176   -.0110842    .0878865  -.2305342   .2345081
+  lf_pop_hat |        176    .0001644    .0039986  -.0087916   .0109681
+prod_labou~t |        176   -.0003765    .0079593  -.0168748   .0224371
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Correlations
+. corr real_GDP_hat hours_hat hours_emp_hat emp*hat u_rate*hat u_pop*hat lf_*hat prod*hat if COVID_times =
+> = 0
+(obs=176)
+
+             | real_G~t ho~s_hat ho~p_hat emp_po~t u_rate~t u_pop_~t lf_pop~t prod_l~t
+-------------+------------------------------------------------------------------------
+real_GDP_hat |   1.0000
+   hours_hat |   0.8700   1.0000
+hours_emp_~t |   0.7353   0.8061   1.0000
+ emp_pop_hat |   0.8182   0.9604   0.6094   1.0000
+  u_rate_hat |  -0.8574  -0.9376  -0.6901  -0.9326   1.0000
+   u_pop_hat |  -0.8571  -0.9290  -0.6938  -0.9192   0.9992   1.0000
+  lf_pop_hat |   0.4429   0.6593   0.2547   0.7647  -0.5139  -0.4796   1.0000
+prod_labou~t |   0.1987  -0.3011  -0.1561  -0.3339   0.2214   0.2043  -0.4685   1.0000
+
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * Period sample of interest
+. gen sp = hours_hat !=. & COVID_times == 0
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline real_GDP_hat hours_hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline real_GDP_hat hours_emp_hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline real_GDP_hat emp*hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline real_GDP_hat hours_emp_hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat emp*hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat hours_emp_hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat lf_pop*hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat u_tilde if sp == 1
+variable u_tilde not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. * emmployment per capita vs (opposite of) unemployment rate
+. tsline emp_hat u_tilde if sp == 1
+variable emp_hat not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat emp*hat if sp == 1
+
+. 
+end of do-file
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat u_rate_hat if sp == 1
+
+. 
+end of do-file
+
+. gen u_tilde = u_rate - u_trend
+u_trend not found
+r(111);
+
+. gen u_tilde = u_rate - u_rate_trend
+(60 missing values generated)
+
+. do "C:\Users\JONATH~1\AppData\Local\Temp\STD5a70_000000.tmp"
+
+. tsline hours_hat u_tilde if sp == 1
+
+. 
+end of do-file
+
+. exit, clear
