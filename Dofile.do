@@ -1,5 +1,5 @@
 * ECO 6193/6593
-* Fall 2021
+* Fall 2023
 * Assignment 1 / Devoir 1
 
 * The cyclicality of aggregate labour-market variables in Canada, 1976-2021 /
@@ -73,7 +73,7 @@ rename col0 date
 label var col1 "Total actual hours worked, all industries; Estimate (Hours)"
 rename col1 tot_hours
 
- 
+save dataset_hours, replace 
 
 **
 **
@@ -81,10 +81,25 @@ rename col1 tot_hours
 * 2.3. Gross domestic product from FRED, series NAEXKP01CAQ189S
 import delimited NAEXKP01CAQ189S.csv, varnames(1) rowrange(2) clear 
 
-label var date "Quarterly date (YYYY-MM-DD)"
+label var date "Date (YYYY-MM-DD)"
 
 label var naexkp01caq189s  "Gross Domestic Product by Expenditure in Constant Prices (source: OECD)"
 rename naexkp01caq189s real_GDP
+
+save dataset_GDP, replace
+
+
+* 2.4. Total population
+import delimited POPTOTCAA647NWDB.csv, varnames(1) rowrange(2) clear 
+
+label var date "Date (YYYY-MM-DD)"
+
+label var poptotcaa647nwdb  "Population (source: World Bank)"
+rename poptotcaa647nwdb tot_population
+
+* merge with GDP
+merge 1:1 date using dataset_GDP
+drop _merge
 
 save dataset_GDP, replace
 
@@ -101,7 +116,7 @@ save dataset_GDP, replace
 **
 **
 
-* 3.1 Monthly data
+* 3.1 Convert date from monthly to quarterly
 
 * Merge lfs data and hours
 use dataset_lfs, clear
@@ -109,33 +124,51 @@ merge 1:1 date using dataset_hours
 drop _merge
 
 * Generate indicators
-gen u_rate 	= unem/labour_force
-gen u_pop 	= unem/population
-gen emp_pop = emp/population
-gen lf_pop 	= labour_force/population 
+gen u_rate 	= unem / labour_force
+gen u_pop 	= unem / population
+gen emp_pop = emp / population
+gen lf_pop 	= labour_force / population 
 
 * Average hours in pop and per employed person
 gen hours 		= tot_hours / population
 gen hours_emp 	= tot_hours / employment
 
-* Compute quarterly average before merging with GDP data
 
-* gen variables for the year and the calendar month
+* Convert to quarterly data
+
+* extract year and month
 gen year = substr(date,1,4)
 destring year, replace
 gen month = substr(date,6,7)
 destring month, replace
 
-* order variables
-order date year month 
-
-* gen calendar quarter variable using the calendar month
+* gen quarter
 gen quarter = ceil( month/3 )
 
-order date year month quarter
+* quarterly date
+gen qdate = yq(year, quarter)
+format qdate %tq
+
+
+* alternativelly, use the function date( ) to convert the string date in a daily date format
+* and then extract the quarter and year using quarter( ) and year( )
+
+/*
+
+rename date date_str 
+gen date = date(date_str, "YM")
+format date %td
+gen year = year(date)
+gen quarter = quarter(date)
+gen qdate = yq(year, quarter)
+format qdate %tq
+
+*/
 
 * collapse to compute quarterly averages
-collapse tot_hours hours hours_emp emp_pop u_rate u_pop lf_pop population, by(year quarter) 
+collapse tot_hours hours hours_emp emp_pop u_rate u_pop lf_pop population, by(qdate) 
+rename qdate date
+order date 
 
 save dataset_lfs_hours_quarter, replace
 
@@ -147,73 +180,65 @@ save dataset_lfs_hours_quarter, replace
 * data
 use dataset_GDP, clear
 
-* quarter and year
+* extract quarter and year
 gen year = substr(date, 1,4)
 destring year, replace
-gen quarter = substr(date, 6,2)
-destring quarter, replace
+gen month = substr(date, 6,2)
+destring month, replace
+gen quarter = ceil( month/3)
 
-* make quarter consistent across dataset
-replace quarter = ceil( quarter/3 )
+* quaterly date
+gen qdate = yq(year, quarter)
+format qdate %tq
 
 * cleanup a little bit
-drop date
-sort year quarter
-order year quarter real_GDP
+keep qdate tot_population real_GDP 
+rename qdate date
+order date 
+sort date
 
-* merge with the labour-market variables
-merge 1:1 year quarter using dataset_lfs_hours_quarter
+* interpolate population from yearly to quarterly to compute GDP per capita
+ipolate tot date, gen(tot_population_int)
+
+* merge with labour-market variables
+merge 1:1 date using dataset_lfs_hours_quarter
 drop _merge
-
-
-**
-**
-
-
-* 3.3. Declare time series variable
-
-* gen as string variable for the date
-tostring year, gen(year_string)
-tostring quarter, gen(quarter_string)
-gen date_string = year_str + "q" + quarter_str
-
-* convert the string variable into a numeric variable
-* that will be interpreted as a quarterly date later on (i.e. after tsset)
-* variable using the function quaterly(.)
-gen date = quarterly( date_string, "YQ", 2021)
-
-* declare time-series dimension
-tsset date, quarterly
-
-
-**
-**
-
-
-* clean up
-drop year* quarter* date_string
-order date real hours lf_pop emp_ u_rate u_pop
-
-* GDP per capita (using the working-age population for simplicity)
-replace real_GDP = real_GDP / population
 
 * Average productivity of labour
 gen prod_labour = real_GDP / tot_hours
 
-* label
+* compute GDP per capita
+replace real = real/tot_population_int
+
+* final cleanup
+keep if tot_hours !=.
+keep if real_GDP !=.
+drop tot*
+drop pop*
+
+
+**
+**
+
+* 3.3. Final working variables
+
+* Declare time series
+tsset date, quarterly
+
+* labels
 label var u_rate    	"Unemployment rate"
 label var u_pop 		"Unemployment-to-population ratio"
 label var emp_pop   	"Employment-to-population ratio"
 label var lf_pop    	"Labour force participation rate"
 label var hours_emp 	"Average hours per employed persons"
 label var hours	    	"Actual hours per capita"
-label var real_GDP		"real GDP per capita"
-label var prod_labour   "Real output per capita per worked hours"
+label var real_GDP		"Real GDP per capita"
+label var prod_labour   "Real output per worked hours"
 
-* save dataset and erase temporary data
+* save dataset
 save dataset, replace
 
-* cleanup
+* cleanup by erasing intermediate dataset
 erase dataset_lfs.dta 
 erase dataset_hours.dta
 erase dataset_GDP.dta
@@ -234,10 +259,8 @@ foreach var of varlist real_GDP prod_labour hours hours_emp u_rate u_pop emp_pop
 * Hodrick-Prescott filter with smoothing parameter 1600
 tsfilter hp `var'_cycle = `var', smooth( 1600 ) trend( `var'_trend )
 
-
 **
 **
-
 
 * 4.2. Log difference from trend
 gen `var'_hat = log( `var' ) - log( `var'_trend )
@@ -283,8 +306,6 @@ tsline real_GDP_hat lf_pop*hat if sp == 1
 
 tsline real_GDP_hat prod*hat if sp == 1
 
-tsline real_GDP_hat u_tilde if sp == 1
-
 
 **
 **
@@ -301,12 +322,11 @@ tsline hours_hat hours_emp_hat if sp == 1
 tsline hours_hat emp*hat hours_emp_hat if sp == 1
 
 * emmployment per capita vs (opposite of) unemployment rate
-tsline emp_hat u_tilde if sp == 1
+gen u_tilde = - ( u_rate - u_rate_trend ) 
+tsline emp_pop_hat u_tilde if sp == 1
 
 * hours per capital vs. unemployment and lfp rate
-tsline hours_hat lf_pop*hat if sp == 1
-
-tsline hours_hat u_tilde if sp == 1
+tsline hours_hat lf_pop*hat u_tilde if sp == 1
 
 
 ******
